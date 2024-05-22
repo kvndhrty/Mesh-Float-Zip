@@ -1,4 +1,4 @@
-from MFZ.mfp import MFP
+from MFZ.mfz import MFZ
 import numpy as np
 import zfpy as zfp
 import matplotlib.pyplot as plt 
@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 
 
-def mfp_compress_time_series(data, points, error_range=[1e-5, 1e-4, 1e-3, 1e-2, 1e-1], block_size=16, epsilon=1.0):
+def mfz_compress_time_series(data, points, error_range=[1e-5, 1e-4, 1e-3, 1e-2, 1e-1], block_size=16, epsilon=1.0):
 
     orig_data_total_bits = data.shape[1] * 32 * data.shape[0]
 
@@ -16,7 +16,7 @@ def mfp_compress_time_series(data, points, error_range=[1e-5, 1e-4, 1e-3, 1e-2, 
 
     for error_tol in error_range:
 
-        compressor = MFP(points=points, error_tol=error_tol, block_size=block_size, epsilon=epsilon)
+        compressor = MFZ(points=points, error_tol=error_tol, block_size=block_size, epsilon=epsilon)
 
         total_bits = 0
 

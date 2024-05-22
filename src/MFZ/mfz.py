@@ -7,7 +7,7 @@ from MFZ.block import Block
 
 
 
-class MFP(object):
+class MFZ(object):
 
     def __init__(self, points, error_tol=1e-3, block_size=4, epsilon = 1.0):
 
