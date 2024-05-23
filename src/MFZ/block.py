@@ -169,30 +169,17 @@ class Block(object):
         except:
             raise ValueError("Decompression failed")
         
-        signs = []
-        mantissas = []
+        negabin_array = []
 
         for i in range(len(self.points)):
 
             current_bits = bits[i*(encoded_field_length) : (i+1)*(encoded_field_length) + 1]
 
-            signs.append(str(current_bits[0]))
+            trunc_nb = ''.join([str(i) for i in current_bits[0::]])
 
-            trunc_man = ''.join([str(i) for i in current_bits[1::]])
+            negabin_array.append(trunc_nb)
 
-            mantissas.append(trunc_man)
-
-        #int_stream = np.packbits(bits)
-
-        #padded_binary = [bin(i).replace('0b', '').rjust(8, '0') for i in int_stream]
-
-        #signed_mantissas = [padded_binary[i] + padded_binary[i+1] + padded_binary[i+2] for i in range(0, len(padded_binary)-2, 3)]
-
-        #signs = [i[0] for i in signed_mantissas]
-
-        #mantissas = [i[1::] for i in signed_mantissas]
-
-        bfp_data = BFP(None, error_tol=None, signs=signs, exponent=exponent, mantissas=mantissas, truncation_bit=truncate_bit)
+        bfp_data = BFP(array=None, error_tol=None, exponent=exponent, negabin_array=negabin_array, truncation_bit=truncate_bit)
 
         return np.linalg.inv(self.basis.T) @ np.array(bfp_data.float())
 
@@ -206,7 +193,7 @@ class Block(object):
         if truncate_bit is None:
             truncate_bit_len = 0
         else:
-            truncate_bit_len = len(truncate_bit)
+            truncate_bit_len = len(truncate_bit)/2
 
         total_bits = 0
 
@@ -215,4 +202,4 @@ class Block(object):
 
         # total mantissa bits + total model bits + total exponent bits
 
-        return total_bits + len(exponent) + len(nu_bits) + truncate_bit_len
+        return total_bits + len(exponent)+ len(nu_bits) + truncate_bit_len

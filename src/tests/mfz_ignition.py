@@ -7,7 +7,9 @@ if __name__ == '__main__':
 
     data, points = load_ignition_mesh()
 
-    comp_ratio, frob_error = mfz_compress_time_series(data[:,:,1], points, error_range=[1e-4, 1e-3, 1e-2], block_size=16)
+    block_size = 64
+
+    comp_ratio, frob_error = mfz_compress_time_series(data[:,:,1], points, error_range=[1e-4, 1e-3, 1e-2], block_size=block_size)
 
     print(f'Compression Ratios: {comp_ratio} and Frobenius Errors: {frob_error}')
 
@@ -16,7 +18,7 @@ if __name__ == '__main__':
     plt.plot(frob_error, comp_ratio, 'o-')
     plt.xlabel('Frobenius Error')
     plt.ylabel('Compression Ratio')
-    plt.title('MFP Compression of Ignition Mesh')
+    plt.title(f'MFP Compression of Ignition Mesh: Block Size {block_size}')
 
     ax.set_xscale('log')
 

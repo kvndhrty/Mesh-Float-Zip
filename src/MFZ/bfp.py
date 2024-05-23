@@ -5,18 +5,24 @@ import numpy as np
 
 class BFP(object):
 
-    def __init__(self, array, error_tol=None, float_format='single', signs=None, exponent=None, mantissas=None, truncation_bit=None) -> None:
+    def __init__(self, array=None, error_tol=None, float_format='single', exponent=None, negabin_array=None, truncation_bit=None) -> None:
 
         self._float_specs(float_format)
 
-        self.exponent = exponent
-        self.signs = signs
-        self.mantissas = mantissas
-        self.truncation_bit = truncation_bit
+        assert array is None or isinstance(array, np.ndarray), "array must be a numpy array or None"
 
+        if array is None:
+            assert exponent is not None and negabin_array is not None, "If array is None, exponent and mantissas must be provided"
+            self.block_size = len(negabin_array)
+
+        self.exponent = exponent
+        self.negabin_array = negabin_array
+        self.truncation_bit = truncation_bit
+        self.block_size = None
         self.error_tol = error_tol
 
-        if signs is None or exponent is None or mantissas is None:
+        if array is not None:
+            self.block_size = len(array)
             self._encode(array)
 
     def bitstream(self) -> np.ndarray:
@@ -25,16 +31,14 @@ class BFP(object):
 
         table = bytearray.maketrans(b'01', b'\x00\x01')
 
-        if self.mantissas == []:
-            mantissas = ['0'*23]*len(self.signs)
+        if self.negabin_array == []:
+            negabin_array = ['0'*(self.mantissa_width+1)]*self.block_size
         else:
-            mantissas = self.mantissas
+            negabin_array = self.negabin_array
 
-        for i in range(len(self.signs)):
+        for i in range(self.block_size):
 
-            bit_bunch = self.signs[i] + mantissas[i]
-
-            bit_bunch = bytearray(bit_bunch, "ascii").translate(table)
+            bit_bunch = bytearray(negabin_array[i], "ascii").translate(table)
 
             bitstream = np.append(bitstream, bit_bunch)
 
@@ -44,14 +48,14 @@ class BFP(object):
 
         bytestream = np.array([], dtype=np.uint8)
 
-        if self.mantissas == []:
-            mantissas = ['0'*23]*len(self.signs)
+        if self.negabin_array == []:
+            negabin_array = ['0'*(self.mantissa_width+1)]*self.block_size
         else:
-            mantissas = self.mantissas
+            negabin_array = self.negabin_array
 
-        for i in range(len(self.signs)):
+        for i in range(self.block_size):
 
-            bit_bunch = self.signs[i].replace('0b', '') + mantissas[i].replace('0b', '').rjust(23, '0')
+            bit_bunch = negabin_array[i]
 
             bytestream = np.append(bytestream, [int(bit_bunch[0:8],2), int(bit_bunch[8:16],2), int(bit_bunch[16::],2)])
 
@@ -61,26 +65,24 @@ class BFP(object):
 
         values = []
 
-        for sign, mantissa in zip(self.signs, self.mantissas):
+        for bin_string in self.negabin_array:
 
             if self.truncation_bit is not None:
-                full_mantissa = mantissa.ljust(self.mantissa_width, '0')
+                full_bin_string = bin_string.ljust(self.mantissa_width+1, '0')
             else:
-                full_mantissa = mantissa    
+                full_bin_string = bin_string
 
-            values.append(self._decode(sign, full_mantissa))
+            values.append(self._decode(full_bin_string))
 
-        return values
+        return np.array(values)
 
     def _encode(self, array) -> None:
 
         signs, exponents, mantissas = self._float_parts(array)
 
-        common_exp = max([int(exp, 2) for exp in exponents])
+        common_exp = max([int(exp, 2) for exp in exponents]) + 1
 
         self.exponent = bin(common_exp)
-
-        self.signs = ['0' if sign == '1' else '1' for sign in signs]
 
         # Make new mantissas via bit shifts
         block_mantissas = []
@@ -103,73 +105,68 @@ class BFP(object):
         block_mantissas = self.threshold(block_mantissas)
 
         if block_mantissas != []:
-            block_mantissas, self.truncation_bit = self.bit_plane_truncate(block_mantissas)
+            negabin_array = self.nega_encode(signs, block_mantissas)
+            negabin_array, self.truncation_bit = self.bit_plane_truncate(negabin_array)
         else:
+            negabin_array = []
             self.truncation_bit = bin(23).replace('0b', '').rjust(8, '0')
 
-        self.mantissas = block_mantissas
+        self.negabin_array = negabin_array
         
-        if self.mantissas == []:
+        if self.negabin_array == []:
             # This exponent indicates that the block is filled with ONLY zeros
             self.exponent = '11111111'
 
         return 
 
-    def _decode(self, sign, mantissa) -> float:
-
-        # Convert the sign bit to a value
-        sign_value = pow(-1, 1 - int(sign,2))
+    def _decode(self, negabin_str) -> float:
 
         # Convert the exponent to a value
         exponent_value = int(self.exponent, 2)
 
         # Convert the mantissa to a value
-        mantissa_value = int(mantissa, 2) / 2**22
+        mantissa_value = self.negabinary_to_int(negabin_str) / 2**22
 
         # Calculate the value
-        value = sign_value * mantissa_value * 2**(exponent_value - self.exp_offset)
+        value = mantissa_value * 2**(exponent_value - self.exp_offset)
 
         return value
 
-    def bit_plane_truncate(self, mantissa_array):
+    def bit_plane_truncate(self, negabin_array):
 
-        first_one_bit = np.array([mantissa[::-1].find('1') for mantissa in mantissa_array])
+        first_one_bit = np.array([negabin[::-1].find('1') for negabin in negabin_array])
 
         if np.all(first_one_bit == -1):
             return [], bin(0).replace('0b', '').rjust(8, '0')
 
         truncation_bit = np.min(first_one_bit[first_one_bit != -1])
 
-        new_mantissas = []
+        new_negabin_array = []
 
-        for k in range(len(self.signs)):
-            new_mantissas.append(mantissa_array[k][0:-truncation_bit])
+        for k in range(self.block_size):
+            new_negabin_array.append(negabin_array[k][0:-truncation_bit])
 
-        return new_mantissas, bin(self.mantissa_width - truncation_bit).replace('0b', '').rjust(8, '0')
+        return new_negabin_array, bin(self.mantissa_width - truncation_bit).replace('0b', '').rjust(8, '0')
 
     def nega_encode(self, signs, mantissa_array):
 
-        for i in range(len(self.signs)):
-            pass
+        num_array = []
 
-        return 
+        for i in range(self.block_size):
+            full_int = pow(-1, int(signs[i], 2)) * int(mantissa_array[i],2)
 
+            num_array.append(self.int_to_negabinary(full_int))
+
+        return num_array
 
     def int_to_negabinary(self, i: int) -> str:
-        """Decimal to negabinary."""
-        if i == 0:
-            digits = ["0"]
-        else:
-            digits = []
-            while i != 0:
-                i, remainder = divmod(i, -2)
-                if remainder < 0:
-                    i, remainder = i + 1, remainder + 2
-                digits.append(str(remainder))
-        return "".join(digits[::-1]).rjust(24,"0")
+        """decimal to negabinary."""
+        Schroeppel = 0xAAAAAAAA # this is 10101010101010101010101010101010 in binary
+
+        return bin((i + Schroeppel) ^ Schroeppel).replace("0b", "").rjust(24, "0")
     
     def negabinary_to_int(self, s: str) -> int:
-        """Negabinary to decimal."""
+        """negabinary to decimal."""
         out = 0
         for i, digit in enumerate(s[::-1]):
             if digit == "1":
@@ -182,7 +179,7 @@ class BFP(object):
             return mantissa_array
 
         # Convert the error tolerance to a mantissa threshold
-
+        
         _, exponent, mantissa = self._float_parts([self.error_tol])
 
         threshold_num = int('1'+mantissa[0][0:-1], 2)
@@ -279,6 +276,6 @@ class BFP(object):
     def __repr__(self) -> str:
 
         if self.exponent == '11111111':
-            return str([0.0]*len(self.signs))
+            return str([0.0]*self.block_size)
 
         return str(self.float())
