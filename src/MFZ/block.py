@@ -65,6 +65,27 @@ class Block(object):
 
         return compressed, nu_bits
     
+    def _deconstrict(self, compressed, nu_bits, encoded_field_length):
+
+        decoder = constriction.stream.queue.RangeDecoder(compressed)
+
+        nu_1 = int(nu_bits,2) * (1/15)
+        
+        if nu_1 == 0:
+            nu_1 += 3e-2
+
+        if nu_1 == 1:
+            nu_1 -= 3e-2
+
+        weighted_model = constriction.stream.model.Bernoulli(nu_1)
+
+        try:
+            bits = decoder.decode(weighted_model,len(self.points)*(encoded_field_length))
+        except:
+            raise ValueError("Decompression failed")
+
+        return bits
+    
     def byte_constrict(self, bfp_data):
 
         bytes = bfp_data.bytestream()
@@ -112,6 +133,20 @@ class Block(object):
 
         return {'mantissas' : cmprssd, 'model' : nu_bits, 'exponent' : bfp_data.exponent}
     
+
+    def raw_bitstream(self, data, error_tol=1e-3):
+
+        #Project data onto basis
+
+        data_spectrum = self.basis.T @ data
+
+        #Convert data to block floating point representation 
+
+        bfp_data = BFP(data_spectrum, error_tol=error_tol)
+
+        return bfp_data.bitstream()
+
+
     def compress(self, data, error_tol=1e-3):
 
         cmprssd = None
@@ -150,24 +185,9 @@ class Block(object):
 
         #Decompress the data
 
-        decoder = constriction.stream.queue.RangeDecoder(compressed)
-
-        nu_1 = int(nu_bits,2) * (1/15)
-        
-        if nu_1 == 0:
-            nu_1 += 3e-2
-
-        if nu_1 == 1:
-            nu_1 -= 3e-2
-
-        weighted_model = constriction.stream.model.Bernoulli(nu_1)
-
         encoded_field_length = int(truncate_bit,2) + 1
 
-        try:
-            bits = decoder.decode(weighted_model,len(self.points)*(encoded_field_length))
-        except:
-            raise ValueError("Decompression failed")
+        bits = self._deconstrict(compressed, nu_bits, encoded_field_length)
         
         negabin_array = []
 
@@ -193,7 +213,7 @@ class Block(object):
         if truncate_bit is None:
             truncate_bit_len = 0
         else:
-            truncate_bit_len = len(truncate_bit)/2
+            truncate_bit_len = 0
 
         total_bits = 0
 

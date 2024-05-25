@@ -12,7 +12,7 @@ from rbffd import *
 from rbffd.rbf_fd import c_trace
 
 
-def make_mhb(points, epsilon=5.0):
+def make_mhb(points, epsilon=1.0):
 
     # Build the matrices with the RBF centers and evaluation points
     N_tot = points.shape[0]
