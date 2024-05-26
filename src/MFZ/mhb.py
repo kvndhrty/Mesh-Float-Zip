@@ -40,8 +40,12 @@ def make_mhb(points, epsilon=1.0):
 
 
     # Build the RBF interpolation matrix (A) and the function laplacian matrix (B)
-    A = vmap_rbf(D_X, D_Y) + 0.0001*jnp.eye(N=N_tot) 
+    A = vmap_rbf(D_X, D_Y) + 0.1*jnp.eye(N=N_tot) 
     B = vmap_laplacian_rbf(D_X, D_Y)
+
+    #A_row_sum = jnp.sum(A, axis=1) - jnp.diag(A)
+
+    #A = A + jnp.diag(A_row_sum)
 
 
     eigenvalues, eigenvectors = la.eigh(B, A)

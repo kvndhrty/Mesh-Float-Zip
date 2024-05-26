@@ -33,6 +33,7 @@ class BFP(object):
 
         if self.negabin_array == []:
             negabin_array = ['0'*(self.mantissa_width+1)]*self.block_size
+            negabin_array = ['0']*self.block_size
         else:
             negabin_array = self.negabin_array
 
@@ -42,7 +43,7 @@ class BFP(object):
 
             bitstream = np.append(bitstream, bit_bunch)
 
-        return bitstream
+        return bitstream.reshape(self.block_size, -1)
     
     def bytestream(self) -> np.ndarray:
 

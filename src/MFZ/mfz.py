@@ -9,7 +9,7 @@ from MFZ.block import Block
 
 class MFZ(object):
 
-    def __init__(self, points, error_tol=1e-3, block_size=4, epsilon = 1.0):
+    def __init__(self, points, error_tol=1e-3, block_size=16, epsilon = 1.0):
 
         assert isinstance(points, np.ndarray), "points must be a numpy array"
 

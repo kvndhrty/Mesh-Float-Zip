@@ -8,6 +8,8 @@ from MFZ.mhb import make_mhb
 
 from MFZ.bfp import BFP
 
+from numpy.polynomial.polynomial import Polynomial
+
 
 class Block(object):
 
@@ -20,9 +22,11 @@ class Block(object):
         if cache:
             self.basis = make_mhb(points, epsilon=epsilon)
 
+
     def __repr__(self) -> str:
         return f"Block({len(self.points)} points, {self.points.shape[-1]} dimensions)"
     
+
     def display(self, ax=None, **kwargs):
         #displays an image of the mesh as a scatter plot
 
@@ -39,53 +43,57 @@ class Block(object):
         
         return ax
     
+
     def _constrict(self, bfp_data):
 
         bits = bfp_data.bitstream()
 
-        nu_bits = bin(int(np.ceil(np.sum(bits) / len(bits) / (1/15)))).replace('0b', '')
-
-        nu_1 = np.ceil(np.sum(bits) / len(bits) / (1/15)) * (1/15)
-
-        if nu_1 == 0:
-            nu_1 += 3e-2
-
-        if nu_1 == 1:
-            nu_1 -= 3e-2
-
-        weighted_model = constriction.stream.model.Bernoulli(nu_1)
-
         encoder = constriction.stream.queue.RangeEncoder()
 
-        encoder.encode(np.array(bits, dtype=np.int32).reshape(-1), weighted_model)
+        model_params, model_tuple = self._fit_model(bits)
+        
+        for i in range(bits.shape[1]):
+
+            bit_plane = bits[:,i]
+
+            nu_1 = model_params[i]
+
+            weighted_model = constriction.stream.model.Bernoulli(nu_1)
+
+            encoder.encode(np.array(bit_plane, dtype=np.int32).reshape(-1), weighted_model)
 
         compressed = encoder.get_compressed()
 
         encoder.clear()
 
-        return compressed, nu_bits
+        return compressed, model_tuple
     
-    def _deconstrict(self, compressed, nu_bits, encoded_field_length):
+
+    def _deconstrict(self, compressed, model_tuple, encoded_field_length):
 
         decoder = constriction.stream.queue.RangeDecoder(compressed)
 
-        nu_1 = int(nu_bits,2) * (1/15)
-        
-        if nu_1 == 0:
-            nu_1 += 3e-2
+        decoded_bits = np.zeros((len(self.points),encoded_field_length), dtype=np.uint8)
 
-        if nu_1 == 1:
-            nu_1 -= 3e-2
+        #threshold_reached = int(nu_bits,2)
 
-        weighted_model = constriction.stream.model.Bernoulli(nu_1)
+        #model_params = np.hstack((np.arange(0, threshold_reached) * (0.5 - 0.10)/threshold_reached + 0.05, np.ones(bits.shape[1] - threshold_reached) * 0.5))
 
-        try:
-            bits = decoder.decode(weighted_model,len(self.points)*(encoded_field_length))
-        except:
-            raise ValueError("Decompression failed")
+        model_params = self._eval_model(model_tuple, encoded_field_length)
 
-        return bits
+        for i in range(encoded_field_length):
+
+                nu_1 = model_params[i]
+
+                weighted_model = constriction.stream.model.Bernoulli(nu_1)
+
+                bits = decoder.decode(weighted_model, len(self.points))
+
+                decoded_bits[:,i] = bits
+
+        return decoded_bits
     
+
     def byte_constrict(self, bfp_data):
 
         bytes = bfp_data.bytestream()
@@ -112,6 +120,7 @@ class Block(object):
 
         return compressed, []
     
+
     def byte_compress(self, data, error_tol=1e-3):
 
         cmprssd = None
@@ -162,11 +171,12 @@ class Block(object):
         #Compress the data
         if bfp_data.exponent == '11111111':
             cmprssd = []
-            nu_bits = ''
+            model_tuple = ''
         else:
-            cmprssd, nu_bits = self._constrict(bfp_data)
+            cmprssd, model_tuple = self._constrict(bfp_data)
 
-        return {'mantissas' : cmprssd, 'model' : nu_bits, 'exponent' : bfp_data.exponent, 'truncate_bit' : bfp_data.truncation_bit}
+        return {'mantissas' : cmprssd, 'model' : model_tuple, 'exponent' : bfp_data.exponent, 'truncate_bit' : bfp_data.truncation_bit}
+
 
     def decompress(self, block_data : dict):
 
@@ -193,7 +203,9 @@ class Block(object):
 
         for i in range(len(self.points)):
 
-            current_bits = bits[i*(encoded_field_length) : (i+1)*(encoded_field_length) + 1]
+            #current_bits = bits[i*(encoded_field_length) : (i+1)*(encoded_field_length) + 1]
+
+            current_bits = bits[i,:]
 
             trunc_nb = ''.join([str(i) for i in current_bits[0::]])
 
@@ -203,23 +215,63 @@ class Block(object):
 
         return np.linalg.inv(self.basis.T) @ np.array(bfp_data.float())
 
+
     def count_bits(self, block_data : dict):
 
         compressed = block_data['mantissas']
-        nu_bits = block_data['model']
+        #nu_bits = block_data['model']
         exponent = block_data['exponent']
         truncate_bit = block_data['truncate_bit']
 
         if truncate_bit is None:
             truncate_bit_len = 0
         else:
-            truncate_bit_len = 0
+            truncate_bit_len = 5
 
         total_bits = 0
 
         for word in compressed:
-            total_bits += len(bin(word).replace('0b', ''))
+            total_bits += len(bin(word).replace('0b', '').rjust(32))
 
         # total mantissa bits + total model bits + total exponent bits
 
-        return total_bits + len(exponent)+ len(nu_bits) + truncate_bit_len
+        return total_bits + len(exponent) + truncate_bit_len + 10
+
+    def _fit_model(self, bits):
+
+        dist = np.sum(bits, axis=0) / bits.shape[0]
+
+        if any(dist > 0.45):
+            line_endpoint = np.min(np.argwhere(dist > 0.45))
+        else:
+            line_endpoint = bits.shape[1] - 1
+
+        y_end = dist[line_endpoint]
+
+        slope = (y_end - 0.01) / line_endpoint
+
+        line_func = lambda x : slope * x + 0.01
+
+        model_params = np.hstack(list(line_func(x) for x in range(line_endpoint)))
+
+        if len(model_params) < bits.shape[1]:
+            model_params = np.hstack((model_params, np.ones(bits.shape[1] - line_endpoint) * 0.5))
+
+
+        assert all(model_params == self._eval_model((slope, line_endpoint), bits.shape[1])), "Model was not recoverable, decoding will fail"
+
+        #print(np.abs(model_params - dist))
+
+        return model_params, (slope, line_endpoint)
+    
+    def _eval_model(self, model_tuple, encoded_field_length):
+
+        slope, line_endpoint = model_tuple
+
+        line_func = lambda x : slope * x + 0.01
+
+        model_params = np.hstack(list(line_func(x) for x in range(encoded_field_length)))
+
+        model_params[line_endpoint::] = 0.5
+
+        return model_params
