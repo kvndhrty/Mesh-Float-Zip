@@ -53,3 +53,35 @@ def make_mhb(points, epsilon=1.0):
     chol_A = la.cholesky(A)
 
     return chol_A @ eigenvectors
+
+
+import spharapy.trimesh as tm
+import spharapy.spharabasis as sb
+
+import scipy.spatial as spatial
+
+
+def make_sphara_mhb(points,):
+
+    tri = spatial.Delaunay(points)
+
+    trilist = tri.simplices
+
+    if points.shape[1] == 2:
+        points = np.hstack((points, np.zeros((points.shape[0], 1))))
+
+    my_mesh = tm.TriMesh(trilist, points)
+
+    sphara_basis = sb.SpharaBasis(my_mesh, 'fem')
+    basis_functions, natural_frequencies = sphara_basis.basis()
+
+    return basis_functions
+
+
+def make_random_basis(points,):
+
+    basis_functions = np.random.randn(points.shape[0], points.shape[0])
+
+    Q, R = la.qr(basis_functions)
+
+    return Q

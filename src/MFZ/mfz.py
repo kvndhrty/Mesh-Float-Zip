@@ -9,7 +9,7 @@ from MFZ.block import Block
 
 class MFZ(object):
 
-    def __init__(self, points, error_tol=1e-3, block_size=16, epsilon = 1.0):
+    def __init__(self, points, error_tol=1e-3, block_size=16, epsilon = 1.0, adjacency_list=None):
 
         assert isinstance(points, np.ndarray), "points must be a numpy array"
 
@@ -22,7 +22,7 @@ class MFZ(object):
 
         self.epsilon = epsilon
 
-        self.membership = block_mesh(self.points, self.block_size)
+        self.membership = block_mesh(self.points, self.block_size, adjacency_list=adjacency_list)
 
         self.num_blocks = max(self.membership) + 1
 

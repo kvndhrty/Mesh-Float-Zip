@@ -5,19 +5,45 @@ import scipy.spatial as spatial
 from numba import jit, njit
 
 
-def block_mesh(points, block_size_target=16):
+def mesh_to_adjacency_list(mesh):
+    adj = {}
+    for cell in mesh.cells: # for each mesh structure
+
+        for i in range(cell.data.shape[0]):  # for each hexagon
+            
+            for j in range(cell.data.shape[1]): # for each vertex
+
+                for k in range(cell.data.shape[1] - j):
+
+                    if cell.data[i,j] not in adj:
+                        adj[cell.data[i,j] ] = []
+                    
+                    if cell.data[i,k] not in adj:
+                        adj[cell.data[i,k]] = []
+
+                    if cell.data[i,j] not in adj[cell.data[i,k]]:
+                        adj[cell.data[i,k]].append(cell.data[i,j])
+
+                    if cell.data[i,k] not in adj[cell.data[i,j]]:
+                        adj[cell.data[i,j]].append(cell.data[i,k])
+    return adj
+
+
+def block_mesh(points, block_size_target=16, adjacency_list=None):
 
     num_blocks = np.ceil(len(points) / block_size_target).astype(np.int32)
 
-    tri = spatial.Delaunay(points)
+    if adjacency_list is None:
 
-    adjacency_list = []
+        tri = spatial.Delaunay(points)
 
-    (indptr, indices) = tri.vertex_neighbor_vertices
+        adjacency_list = []
 
-    for k in range(len(tri.points)):
-        neighbors = indices[indptr[k]:indptr[k+1]]
-        adjacency_list.append(np.array([n for n in neighbors if n != -1]))
+        (indptr, indices) = tri.vertex_neighbor_vertices
+
+        for k in range(len(tri.points)):
+            neighbors = indices[indptr[k]:indptr[k+1]]
+            adjacency_list.append(np.array([n for n in neighbors if n != -1]))
 
     n_cuts, membership = metis.part_graph(adjacency=adjacency_list, nparts=num_blocks)
 

@@ -1,6 +1,7 @@
 import numpy as np
 import platform
 from pathlib import Path
+import meshio
 
 
 def get_parent_dir():
@@ -47,3 +48,20 @@ def load_flat_plate():
     dataset = np.load(data_path)
 
     return dataset, points
+
+
+
+
+def load_neuron_tx():
+    parent_dir = get_parent_dir()
+    points_path = parent_dir / "Neuron Transport" / "NMO_54504" / "points.npy"
+    data_path = parent_dir / "Neuron Transport" / "NMO_54504" / "concentration_all_fix.npy"
+    mesh_path = parent_dir / "Neuron Transport" / "NMO_54504" / "mesh.vtk"
+
+
+    points = np.load(points_path)
+    dataset = np.load(data_path).swapaxes(0,1)
+
+    mesh = meshio.read(mesh_path)
+
+    return dataset, points, mesh

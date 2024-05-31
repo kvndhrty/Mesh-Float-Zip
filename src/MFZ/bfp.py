@@ -83,7 +83,7 @@ class BFP(object):
 
         common_exp = max([int(exp, 2) for exp in exponents]) + 1
 
-        self.exponent = bin(common_exp)
+        self.exponent = bin(common_exp).replace('0b', '').rjust(8, '0')
 
         # Make new mantissas via bit shifts
         block_mantissas = []
@@ -142,6 +142,9 @@ class BFP(object):
 
         truncation_bit = np.min(first_one_bit[first_one_bit != -1])
 
+        if truncation_bit == 0:
+            return negabin_array, bin(0).replace('0b', '').rjust(8, '0')
+
         new_negabin_array = []
 
         for k in range(self.block_size):
@@ -197,6 +200,9 @@ class BFP(object):
         mantissa_threshold = threshold_num >> (-exp_difference)
 
         mantissa_threshold = bin(mantissa_threshold).replace('0b', '')
+
+        if int(mantissa_threshold,2) == 0:
+            return mantissa_array
 
         new_mantissas = []
 

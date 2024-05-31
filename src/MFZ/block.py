@@ -4,23 +4,23 @@ import constriction
 
 import numpy as np
 
-from MFZ.mhb import make_mhb
+from MFZ.mhb import make_mhb, make_sphara_mhb, make_random_basis
 
 from MFZ.bfp import BFP
 
-from numpy.polynomial.polynomial import Polynomial
+from numba import jit, njit
 
 
 class Block(object):
 
-    def __init__(self, points, cache=True, epsilon=1.0):
+    def __init__(self, points : np.ndarray , cache : bool = True, epsilon : float = 1.0, basis_function = make_mhb):
 
         self.points = points
 
         self.decoder = None
 
         if cache:
-            self.basis = make_mhb(points, epsilon=epsilon)
+            self.basis = basis_function(points)
 
 
     def __repr__(self) -> str:
@@ -43,6 +43,76 @@ class Block(object):
         
         return ax
     
+
+    def _encode_bitstream(self, bfp_data):
+
+        bits = bfp_data.bitstream()
+
+        compressed_stream = []
+
+        current_encoding = '1'
+
+        for i in range(bits.shape[1]):
+
+            bit_plane = bits[:,i]
+
+            if bit_plane.sum() == 0:
+                compressed_stream.append('0')
+                continue
+
+            for j in range(bits.shape[0]):
+
+                if bit_plane[j] == 1:
+                    current_encoding += '1'
+
+                    if (j+1 > bits.shape[0]) or (bit_plane[j+1::].sum() == 0):
+                        current_encoding += '0'
+                        break
+                    else:
+                        current_encoding += '1'
+                elif bit_plane[j] == 0:
+                    current_encoding += '0'
+
+            compressed_stream.append(current_encoding)
+            current_encoding = '1'
+
+        return compressed_stream, None
+
+
+    def _decode_bitstream(self, compressed_stream, encoded_field_length):
+
+        decoded_bits = np.zeros((len(self.points),encoded_field_length), dtype=np.uint8)
+
+        for i in range(encoded_field_length):
+
+            current_encoding = compressed_stream[i]
+
+            if current_encoding == '0':
+                continue
+
+            most_recent_bit = 0
+            bit_index = 0
+
+            for bit in current_encoding[1::]:
+
+                if most_recent_bit == 1:
+                    if bit == '1':
+                        most_recent_bit = 0
+                    elif bit == '0':
+                        break
+
+                else:
+
+                    if bit == '1':
+                        decoded_bits[bit_index,i] = 1
+                        most_recent_bit = 1
+                    elif bit == '0':
+                        most_recent_bit = 0
+                    
+                    bit_index += 1
+
+        return decoded_bits
+
 
     def _constrict(self, bfp_data):
 
@@ -183,7 +253,7 @@ class Block(object):
         # Unpack dict
 
         compressed = block_data['mantissas']
-        nu_bits = block_data['model']
+        model_tuple = block_data['model']
         exponent = block_data['exponent']
         truncate_bit = block_data['truncate_bit']
 
@@ -197,7 +267,7 @@ class Block(object):
 
         encoded_field_length = int(truncate_bit,2) + 1
 
-        bits = self._deconstrict(compressed, nu_bits, encoded_field_length)
+        bits = self._deconstrict(compressed, model_tuple, encoded_field_length)
         
         negabin_array = []
 
@@ -231,11 +301,12 @@ class Block(object):
         total_bits = 0
 
         for word in compressed:
-            total_bits += len(bin(word).replace('0b', '').rjust(32))
+            total_bits += len(word)
 
         # total mantissa bits + total model bits + total exponent bits
 
-        return total_bits + len(exponent) + truncate_bit_len + 10
+        return total_bits + len(exponent) + truncate_bit_len
+
 
     def _fit_model(self, bits):
 
@@ -264,6 +335,7 @@ class Block(object):
 
         return model_params, (slope, line_endpoint)
     
+
     def _eval_model(self, model_tuple, encoded_field_length):
 
         slope, line_endpoint = model_tuple
