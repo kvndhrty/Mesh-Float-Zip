@@ -1,7 +1,6 @@
-import struct
-
 import numpy as np
 
+from MFZ.fast_funcs import negabinary_to_int, strip_and_pad, float_parts, int_to_negabinary
 
 class BFP(object):
 
@@ -27,23 +26,25 @@ class BFP(object):
 
     def bitstream(self) -> np.ndarray:
 
-        bitstream = np.array([], dtype=np.uint8)
-
         table = bytearray.maketrans(b'01', b'\x00\x01')
 
         if self.negabin_array == []:
             negabin_array = ['0'*(self.mantissa_width+1)]*self.block_size
             negabin_array = ['0']*self.block_size
+            return np.zeros((self.block_size, 1), dtype=np.uint8)
         else:
             negabin_array = self.negabin_array
+            bitstream = np.empty((self.block_size, len(negabin_array[0])), dtype=np.uint8)
 
         for i in range(self.block_size):
 
             bit_bunch = bytearray(negabin_array[i], "ascii").translate(table)
 
-            bitstream = np.append(bitstream, bit_bunch)
+            bitstream[i, :] = np.frombuffer(bit_bunch, dtype=np.uint8)
 
-        return bitstream.reshape(self.block_size, -1)
+            #bitstream = np.append(bitstream, bit_bunch)
+
+        return bitstream
     
     def bytestream(self) -> np.ndarray:
 
@@ -79,7 +80,7 @@ class BFP(object):
 
     def _encode(self, array) -> None:
 
-        signs, exponents, mantissas = self._float_parts(array)
+        signs, exponents, mantissas = float_parts(array, self.exponent_width)
 
         common_exp = max([int(exp, 2) for exp in exponents]) + 1
 
@@ -102,7 +103,7 @@ class BFP(object):
             # Convert back to binary
             block_mantissas.append(bin(shifted_mantissa))
 
-        block_mantissas = self._strip_and_pad(block_mantissas, 23)
+        block_mantissas = strip_and_pad(block_mantissas, 23)
         block_mantissas = self.threshold(block_mantissas)
 
         if block_mantissas != []:
@@ -126,7 +127,7 @@ class BFP(object):
         exponent_value = int(self.exponent, 2)
 
         # Convert the mantissa to a value
-        mantissa_value = self.negabinary_to_int(negabin_str) / 2**22
+        mantissa_value = negabinary_to_int(negabin_str) / 2**22
 
         # Calculate the value
         value = mantissa_value * 2**(exponent_value - self.exp_offset)
@@ -159,23 +160,9 @@ class BFP(object):
         for i in range(self.block_size):
             full_int = pow(-1, int(signs[i], 2)) * int(mantissa_array[i],2)
 
-            num_array.append(self.int_to_negabinary(full_int))
+            num_array.append(int_to_negabinary(full_int))
 
         return num_array
-
-    def int_to_negabinary(self, i: int) -> str:
-        """decimal to negabinary."""
-        Schroeppel = 0xAAAAAAAA # this is 10101010101010101010101010101010 in binary
-
-        return bin((i + Schroeppel) ^ Schroeppel).replace("0b", "").rjust(24, "0")
-    
-    def negabinary_to_int(self, s: str) -> int:
-        """negabinary to decimal."""
-        out = 0
-        for i, digit in enumerate(s[::-1]):
-            if digit == "1":
-                out += (-2) ** i
-        return out
 
     def threshold(self, mantissa_array):
 
@@ -184,7 +171,7 @@ class BFP(object):
 
         # Convert the error tolerance to a mantissa threshold
         
-        _, exponent, mantissa = self._float_parts([self.error_tol])
+        _, exponent, mantissa = float_parts([self.error_tol], self.exponent_width)
 
         threshold_num = int('1'+mantissa[0][0:-1], 2)
 
@@ -235,50 +222,6 @@ class BFP(object):
             self.exp__offset = 1023
         else:
             raise ValueError("Invalid float format. Choose 'single' or 'double'")
-
-    def _strip_and_pad(self, bin_array, width):
-
-        # Join the binaries and remove the '0b' prefix
-        stripped_binaries = [s.replace('0b', '') for s in bin_array]
-
-        # Pad the binaries to width bits
-        padded = [s.rjust(width, '0') for s in stripped_binaries]
-
-        return padded
-
-    def _float_parts(self, arr):
-
-        signs = []
-        exponents = []
-        mantissas = []
-        
-        for num in arr:
-
-            # Pack the float into hex data (IEEE 754 format)
-            packed_hex = struct.pack('>f', num)
-
-            # Convert the packed hex data to an integer
-            integers = [c for c in packed_hex]
-
-            # Convert the integers to binary
-            binaries = [bin(i) for i in integers]
-
-            # Strip and pad the binaries
-            padded = self._strip_and_pad(binaries, 8)
-
-            # Join the binaries
-            bit_string = ''.join(padded)
-            
-            # Convert to bitstrings
-            sign_bit = bit_string[0]
-            exponent_bits = bit_string[1:1+self.exponent_width]
-            mantissa_bits = bit_string[1+self.exponent_width::]
-            
-            signs.append(sign_bit)
-            exponents.append(exponent_bits)
-            mantissas.append(mantissa_bits)
-            
-        return signs, exponents, mantissas
     
     def __repr__(self) -> str:
 
