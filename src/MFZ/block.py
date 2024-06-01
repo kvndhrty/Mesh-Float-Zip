@@ -254,8 +254,6 @@ class Block(object):
         else:
             line_endpoint = bits.shape[1] - 1
 
-        #y_end = dist[line_endpoint]
-
         avg_zeros = np.mean(dist[0:line_endpoint], axis=0)
 
         discrete_avg_zeros = np.floor(avg_zeros / (1/30)) * (1/30)
@@ -263,17 +261,8 @@ class Block(object):
         if discrete_avg_zeros == 0:
             discrete_avg_zeros = 0.01
 
-        #slope = (y_end - 0.01) / line_endpoint
-
-        #discrete_slope = np.floor(slope / (1/30)) * (1/30)
-
-        #nu_1 = bin(int(np.floor(slope / (1/30)))).replace('0b', '').rjust(4, '0')
         nu_1 = bin(int(np.floor(avg_zeros / (1/30)))).replace('0b', '').rjust(4, '0')
         nu_2 = bin(line_endpoint).replace('0b', '').rjust(5, '0')
-
-        #line_func = lambda x : discrete_slope * x + 0.01
-
-        #model_params = np.hstack(list(line_func(x) for x in range(bits.shape[1])))
 
         model_params = np.ones(bits.shape[1]) * discrete_avg_zeros
 
@@ -291,18 +280,12 @@ class Block(object):
 
         nu_1, nu_2 = model_tuple
 
-        #slope = int(nu_1,2) * (1/30)
-
         avg_zeros = int(nu_1,2) * (1/30)
 
         if avg_zeros == 0:
             avg_zeros = 0.01
 
         line_endpoint = int(nu_2,2)
-
-        #line_func = lambda x : slope * x + 0.01
-
-        #model_params = np.hstack(list(line_func(x) for x in range(encoded_field_length)))
 
         model_params = np.ones(encoded_field_length) * avg_zeros
 
