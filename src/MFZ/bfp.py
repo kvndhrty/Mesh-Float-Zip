@@ -29,8 +29,6 @@ class BFP(object):
         table = bytearray.maketrans(b'01', b'\x00\x01')
 
         if self.negabin_array == []:
-            negabin_array = ['0'*(self.mantissa_width+1)]*self.block_size
-            negabin_array = ['0']*self.block_size
             return np.zeros((self.block_size, 1), dtype=np.uint8)
         else:
             negabin_array = self.negabin_array
@@ -41,8 +39,6 @@ class BFP(object):
             bit_bunch = bytearray(negabin_array[i], "ascii").translate(table)
 
             bitstream[i, :] = bit_bunch
-
-            #bitstream = np.append(bitstream, bit_bunch)
 
         return bitstream
     

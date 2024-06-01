@@ -144,10 +144,6 @@ class Block(object):
 
         decoded_bits = np.empty((len(self.points),encoded_field_length), dtype=np.uint8)
 
-        #threshold_reached = int(nu_bits,2)
-
-        #model_params = np.hstack((np.arange(0, threshold_reached) * (0.5 - 0.10)/threshold_reached + 0.05, np.ones(bits.shape[1] - threshold_reached) * 0.5))
-
         model_params = self._eval_model(model_tuple, encoded_field_length)
 
         for i in range(encoded_field_length):
@@ -246,45 +242,71 @@ class Block(object):
 
         # total mantissa bits + total model bits + total exponent bits
 
-        return total_bits + len(exponent) + truncate_bit_len + 12
+        return total_bits + len(exponent) + truncate_bit_len + 9
 
 
     def _fit_model(self, bits):
 
         dist = np.sum(bits, axis=0) / bits.shape[0]
 
-        if any(dist > 0.45):
-            line_endpoint = np.min(np.argwhere(dist > 0.45))
+        if any(dist > 0.40):
+            line_endpoint = np.min(np.argwhere(dist > 0.40))
         else:
             line_endpoint = bits.shape[1] - 1
 
-        y_end = dist[line_endpoint]
+        #y_end = dist[line_endpoint]
 
-        slope = (y_end - 0.01) / line_endpoint
+        avg_zeros = np.mean(dist[0:line_endpoint], axis=0)
 
-        line_func = lambda x : slope * x + 0.01
+        discrete_avg_zeros = np.floor(avg_zeros / (1/30)) * (1/30)
 
-        model_params = np.hstack(list(line_func(x) for x in range(line_endpoint)))
+        if discrete_avg_zeros == 0:
+            discrete_avg_zeros = 0.01
 
-        if len(model_params) < bits.shape[1]:
-            model_params = np.hstack((model_params, np.ones(bits.shape[1] - line_endpoint) * 0.5))
+        #slope = (y_end - 0.01) / line_endpoint
 
+        #discrete_slope = np.floor(slope / (1/30)) * (1/30)
 
-        assert all(model_params == self._eval_model((slope, line_endpoint), bits.shape[1])), "Model was not recoverable, decoding will fail"
+        #nu_1 = bin(int(np.floor(slope / (1/30)))).replace('0b', '').rjust(4, '0')
+        nu_1 = bin(int(np.floor(avg_zeros / (1/30)))).replace('0b', '').rjust(4, '0')
+        nu_2 = bin(line_endpoint).replace('0b', '').rjust(5, '0')
 
-        #print(np.abs(model_params - dist))
+        #line_func = lambda x : discrete_slope * x + 0.01
 
-        return model_params, (slope, line_endpoint)
+        #model_params = np.hstack(list(line_func(x) for x in range(bits.shape[1])))
+
+        model_params = np.ones(bits.shape[1]) * discrete_avg_zeros
+
+        if line_endpoint < bits.shape[1] - 1:
+            model_params[line_endpoint::] = 0.5
+
+        assert all(model_params == self._eval_model((nu_1, nu_2), bits.shape[1])), "Model was not recoverable, decoding will fail"
+
+        assert all(model_params < 1.0) and all(model_params > 0.0), "Model parameters are not within the correct range"
+
+        return model_params, (nu_1, nu_2)
     
 
     def _eval_model(self, model_tuple, encoded_field_length):
 
-        slope, line_endpoint = model_tuple
+        nu_1, nu_2 = model_tuple
 
-        line_func = lambda x : slope * x + 0.01
+        #slope = int(nu_1,2) * (1/30)
 
-        model_params = np.hstack(list(line_func(x) for x in range(encoded_field_length)))
+        avg_zeros = int(nu_1,2) * (1/30)
 
-        model_params[line_endpoint::] = 0.5
+        if avg_zeros == 0:
+            avg_zeros = 0.01
+
+        line_endpoint = int(nu_2,2)
+
+        #line_func = lambda x : slope * x + 0.01
+
+        #model_params = np.hstack(list(line_func(x) for x in range(encoded_field_length)))
+
+        model_params = np.ones(encoded_field_length) * avg_zeros
+
+        if line_endpoint < encoded_field_length - 1:
+            model_params[line_endpoint::] = 0.5
 
         return model_params
