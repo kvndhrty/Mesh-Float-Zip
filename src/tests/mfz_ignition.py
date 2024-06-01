@@ -1,6 +1,6 @@
 from MFZ.tests import mfz_compress_time_series, zfp_compress_time_series
 from matplotlib import pyplot as plt
-
+import numpy as np
 from MFZ.dataloader import load_ignition_mesh
 
 from pathlib import Path
@@ -9,11 +9,19 @@ if __name__ == '__main__':
 
     data, points = load_ignition_mesh()
 
-    block_size = 32
+    np.random.seed(0)
 
-    comp_ratio, frob_error = mfz_compress_time_series(data[:,:,1], points, error_range=[1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1/2], block_size=block_size)
+    block_size = 16
 
-    zcomp_ratio, zfrob_error = zfp_compress_time_series(data[:,:,1], error_range=[1e-4, 1e-3, 1e-2, 1e-1, 1/2])
+    comp_ratio, frob_error = mfz_compress_time_series(data[:,:,1], points, error_range=[1e-3, 1e-2, 1e-1], block_size=block_size)
+
+    data_swapped = data.swapaxes(0,1)
+
+    np.random.shuffle(data_swapped)
+
+    re_shuffled_data = data_swapped.swapaxes(0,1)
+
+    zcomp_ratio, zfrob_error = zfp_compress_time_series(re_shuffled_data[:,:,1], error_range=[1e-3, 1e-2, 1e-1])
 
     print(f'Compression Ratios: {comp_ratio} and Frobenius Errors: {frob_error}')
     print(f'Compression Ratios: {zcomp_ratio} and Frobenius Errors: {zfrob_error}')
@@ -31,7 +39,7 @@ if __name__ == '__main__':
 
     ax.set_xscale('log')
 
-    plt.savefig( Path(r'C:\Users\Kevin\OneDrive - UCB-O365\Documents\Research\GitHub\MFZ\figures') / f'block_{block_size}_ignition_mesh_compression_no_diag.png')
+    plt.savefig( Path(r'C:\Users\Kevin\OneDrive - UCB-O365\Documents\Research\GitHub\Mesh-Float-Zip\figures') / f'block_{block_size}_ignition_mesh_compression_shuffle.png')
 
     plt.show()
 

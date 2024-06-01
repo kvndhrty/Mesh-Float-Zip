@@ -40,7 +40,7 @@ class BFP(object):
 
             bit_bunch = bytearray(negabin_array[i], "ascii").translate(table)
 
-            bitstream[i, :] = np.frombuffer(bit_bunch, dtype=np.uint8)
+            bitstream[i, :] = bit_bunch
 
             #bitstream = np.append(bitstream, bit_bunch)
 
