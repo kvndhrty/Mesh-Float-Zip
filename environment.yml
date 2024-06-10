@@ -1,0 +1,25 @@
+name: zfp
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - dask
+  - ipykernel
+  - ipython
+  - matplotlib
+  - meshio
+  - numba
+  - numpy
+  - pip
+  - pymetis
+  - scipy
+  - seaborn
+  - tqdm
+  - zfpy
+
+  - pip:
+    - constriction
+    - jax
+    - mfz==0.0.1
+    - rbf-fdax==0.0.1
+    - spharapy

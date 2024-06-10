@@ -1,6 +1,6 @@
 import numpy as np
 
-from src.MFZ.partition import block_tensor, unblock_tensor, outer_product_basis
+from MFZ.partition import block_tensor, unblock_tensor, outer_product_basis
 
 from numba import jit, njit
 
@@ -50,4 +50,42 @@ def zfp_dct_basis(t = (2/np.pi) * np.arcsin(1/(2*np.sqrt(2)))):
     return Q * 1/2
 
 
+import pickle
+from pathlib import Path
 
+def save_stats(stats : dict, filename : str):
+    # saves a dictionary of information to a file
+
+    filename = Path(filename)
+
+    with filename.open('wb') as f:
+        pickle.dump(stats, f)
+
+
+def load_stats(filename : str):
+    # loads a dictionary of information from a file
+
+    filename = Path(filename)
+
+    with filename.open('rb') as f:
+        stats = pickle.load(f)
+
+    return stats
+
+
+def psnr(data, recon):
+
+    data_spread = np.max(data) - np.min(data)
+
+    data = data.reshape(recon.shape)
+
+    return 10 * np.log10(data_spread**2 / np.mean((data - recon)**2))
+
+
+def relative_frob(data, recon):
+
+    data = data.reshape(recon.shape)
+
+    rb = np.sqrt(np.sum((data - recon)**2)) / (np.sqrt(np.sum((data)**2)) + 1e-6)
+
+    return rb

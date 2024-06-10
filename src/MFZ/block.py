@@ -226,7 +226,6 @@ class Block(object):
     def count_bits(self, block_data : dict):
 
         compressed = block_data['mantissas']
-        #nu_bits = block_data['model']
         exponent = block_data['exponent']
         truncate_bit = block_data['truncate_bit']
 

@@ -8,7 +8,9 @@ def get_parent_dir():
     if platform.system() == 'Windows':
         parent_dir = Path(r"C:\Users\Kevin\OneDrive - UCB-O365\Documents\Research\GitHub\common-data")
     elif platform.system() == 'Darwin':
-        parent_dir = Path(r"/Users/kevin/Documents/GitHub/common-data")
+        parent_dir = Path(r"/Users/kdoh/Library/CloudStorage/OneDrive-UCB-O365/Documents/Research/GitHub/common-data")
+    elif platform.system() == 'Linux':
+        parent_dir = Path(r"/mnt/c/Users/Kevin/OneDrive - UCB-O365/Documents/Research/GitHub/common-data")
     return parent_dir
 
 
