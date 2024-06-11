@@ -140,7 +140,7 @@ class BFP(object):
         truncation_bit = np.min(first_one_bit[first_one_bit != -1])
 
         if truncation_bit == 0:
-            return negabin_array, bin(0).replace('0b', '').rjust(8, '0')
+            return negabin_array, bin(self.mantissa_width).replace('0b', '').rjust(8, '0')
 
         new_negabin_array = []
 

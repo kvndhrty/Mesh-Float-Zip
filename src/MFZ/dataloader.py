@@ -36,7 +36,7 @@ def load_ignition_mesh():
     data_path = parent_dir / "ignition_mesh" / "features.npy"
 
     points = np.load(points_path).reshape(2189, 2)
-    dataset = np.load(data_path)
+    dataset = np.load(data_path).astype(np.float32)
 
     return dataset, points
 
@@ -47,7 +47,7 @@ def load_flat_plate():
     data_path = parent_dir / "flat_plate_2d_cut" / "features_603.npy"
 
     points = np.load(points_path)
-    dataset = np.load(data_path)
+    dataset = np.load(data_path).astype(np.float32)
 
     return dataset, points
 
@@ -63,6 +63,8 @@ def load_neuron_tx():
 
     points = np.load(points_path)
     dataset = np.load(data_path).swapaxes(0,1)
+
+    dataset = dataset.astype(np.float32)
 
     mesh = meshio.read(mesh_path)
 

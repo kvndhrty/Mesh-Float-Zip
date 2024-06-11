@@ -7,6 +7,7 @@ __pycache__/
 # Local repo files
 /figures/
 /notebooks/
+/legacy/
 
 # C extensions
 *.so

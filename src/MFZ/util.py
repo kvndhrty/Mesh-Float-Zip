@@ -75,11 +75,19 @@ def load_stats(filename : str):
 
 def psnr(data, recon):
 
-    data_spread = np.max(data) - np.min(data)
+    data_spread = np.max(data)- np.min(data)
+
+    if data_spread == 0.0:
+        data_spread = 1.0
 
     data = data.reshape(recon.shape)
 
-    return 10 * np.log10(data_spread**2 / np.mean((data - recon)**2))
+    psnr = 10 * np.log10(data_spread**2 / (np.mean((data - recon)**2) + 1e-9))
+
+    if np.isnan(psnr):
+        ValueError('PSNR is NaN')
+
+    return psnr
 
 
 def relative_frob(data, recon):

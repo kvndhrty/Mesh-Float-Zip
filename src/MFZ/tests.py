@@ -57,10 +57,6 @@ def zfp_compress_time_series(data, error_range=[1e-5, 1e-4, 1e-3, 1e-2, 1e-1]):
 
     orig_data_total_bytes = data.shape[0] * data.shape[1] * 32/8
 
-    comp_ratio = []
-
-    frob_error = []
-
     for error_tol in tqdm(error_range, desc='Error Tolerance'):
 
         frob_avg = 0
@@ -86,8 +82,7 @@ def zfp_compress_time_series(data, error_range=[1e-5, 1e-4, 1e-3, 1e-2, 1e-1]):
         stats_dict['avg_psnr'].append(psnr_avg / data.shape[0])
         stats_dict['error_tol'].append(error_tol)
         
-    return comp_ratio, frob_error
-
+    return stats_dict
 
 
 
@@ -95,7 +90,7 @@ def sz_compress_time_series(data, error_range=[1e-5, 1e-4, 1e-3, 1e-2, 1e-1]):
 
     stats_dict = {'avg_rel_frob_error': [], 'avg_psnr' : [],  'comp_ratio': [], 'error_tol': []}
 
-    if sys.platform is not 'darwin':
+    if sys.platform != 'darwin':
         ValueError('SZ3 tests are only supported on MacOS')
 
     lib_extention = {
