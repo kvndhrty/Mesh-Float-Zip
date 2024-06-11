@@ -8,6 +8,7 @@ __pycache__/
 /figures/
 /notebooks/
 /legacy/
+/stats/
 
 # C extensions
 *.so
