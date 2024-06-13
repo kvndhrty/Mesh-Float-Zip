@@ -1,7 +1,8 @@
 from MFZ.tests import zfp_compress_time_series
 import numpy as np
-from MFZ.dataloader import load_flat_plate, get_parent_dir, shuffle_data
+from MFZ.dataloader import load_flat_plate, get_parent_dir, ax1_shuffle
 from MFZ.util import save_stats
+import copy
 
 if __name__ == '__main__':
 
@@ -11,7 +12,10 @@ if __name__ == '__main__':
 
     for shuffle in [True, False]:
 
-        data, points = shuffle_data(orig_data, orig_points) if shuffle_data else (orig_data, orig_points)
+        if shuffle:
+            data = ax1_shuffle(copy.deepcopy(orig_data))
+        else:
+            data = orig_data
 
         for channel in range(data.shape[-1]):
 

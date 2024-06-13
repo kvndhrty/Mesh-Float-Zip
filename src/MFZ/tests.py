@@ -85,8 +85,8 @@ def zfp_compress_time_series(data, error_range=[1e-5, 1e-4, 1e-3, 1e-2, 1e-1]):
     return stats_dict
 
 
-
-def sz_compress_time_series(data, error_range=[1e-5, 1e-4, 1e-3, 1e-2, 1e-1]):
+import copy
+def sz_compress_time_series(input_data, error_range=[1e-5, 1e-4, 1e-3, 1e-2, 1e-1]):
 
     stats_dict = {'avg_rel_frob_error': [], 'avg_psnr' : [],  'comp_ratio': [], 'error_tol': []}
 
@@ -98,9 +98,9 @@ def sz_compress_time_series(data, error_range=[1e-5, 1e-4, 1e-3, 1e-2, 1e-1]):
     "win32": "SZ3c.dll",
     }.get(sys.platform, "libSZ3c.so")
 
-    data = data.astype(np.float32)
+    data = copy.deepcopy(input_data)
 
-    sz_dylib = Path(r'/Users/kdoh/Library/CloudStorage/OneDrive-UCB-O365/Documents/Research/GitHub/SZ3/build_darwin/lib') / lib_extention
+    sz_dylib = Path(r'/Users/kdoh/Documents/GitHub/SZ3-install/lib') / lib_extention
 
     sz = SZ(str(sz_dylib))
 

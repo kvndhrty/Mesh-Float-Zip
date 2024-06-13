@@ -1,4 +1,4 @@
-name: zfp
+name: compression
 channels:
   - conda-forge
   - defaults

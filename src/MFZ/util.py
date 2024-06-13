@@ -94,6 +94,6 @@ def relative_frob(data, recon):
 
     data = data.reshape(recon.shape)
 
-    rb = np.sqrt(np.sum((data - recon)**2)) / (np.sqrt(np.sum((data)**2)) + 1e-6)
+    rb = np.sqrt(np.sum((data - recon)**2)) / (np.sqrt(np.sum((data)**2)) + 1e-9)
 
     return rb

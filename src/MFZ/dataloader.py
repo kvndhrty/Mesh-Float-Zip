@@ -23,6 +23,16 @@ def shuffle_data(data, points):
     idx = np.random.permutation(data.shape[1])
     return data[:,idx], points[idx]
 
+def ax1_shuffle(array):
+
+    swapped = array.swapaxes(0,1)
+
+    np.random.shuffle(swapped)
+
+    de_swapped = swapped.swapaxes(0,1)
+
+    return de_swapped
+
 def load_ignition_grid():
     parent_dir = get_parent_dir()
     file_path = parent_dir / 'common-data' / "ignition_grid" / "features.npy"
@@ -61,15 +71,13 @@ def load_flat_plate():
 def load_neuron_tx():
     parent_dir = get_parent_dir()
     points_path = parent_dir / 'common-data' / "Neuron Transport" / "NMO_54504" / "points.npy"
-    data_path = parent_dir / 'common-data' / "Neuron Transport" / "NMO_54504" / "concentration_all_fix.npy"
+    data_path = parent_dir / 'common-data' / "Neuron Transport" / "NMO_54504" / "concentration_float32.npy"
     mesh_path = parent_dir / 'common-data' / "Neuron Transport" / "NMO_54504" / "mesh.vtk"
 
-
-    points = np.load(points_path)
-    dataset = np.load(data_path).swapaxes(0,1)
-
-    dataset = dataset.astype(np.float32)
-
     mesh = meshio.read(mesh_path)
+    points = np.load(points_path)
+    dataset = np.load(data_path).astype(np.float32)
+
+    
 
     return dataset, points, mesh

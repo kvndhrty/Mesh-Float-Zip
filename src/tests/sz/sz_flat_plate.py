@@ -1,17 +1,21 @@
 from MFZ.tests import sz_compress_time_series
 import numpy as np
-from MFZ.dataloader import load_flat_plate, shuffle_data, get_parent_dir
+from MFZ.dataloader import load_flat_plate, ax1_shuffle, get_parent_dir
 from MFZ.util import save_stats
+import copy
 
 if __name__ == '__main__':
 
-    orig_data, orig_points = load_flat_plate()
+    orig_data, _ = load_flat_plate()
 
     np.random.seed(0)
 
     for shuffle in [True, False]:
 
-        data, points = shuffle_data(orig_data, orig_points) if shuffle_data else (orig_data, orig_points)
+        if shuffle:
+            data = ax1_shuffle(copy.deepcopy(orig_data))
+        else:
+            data = orig_data
 
         for channel in range(data.shape[-1]):
 

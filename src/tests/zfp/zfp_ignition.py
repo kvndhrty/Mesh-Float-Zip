@@ -1,7 +1,8 @@
 from MFZ.tests import zfp_compress_time_series
 from MFZ.util import save_stats
-from MFZ.dataloader import load_ignition_mesh, shuffle_data, get_parent_dir
+from MFZ.dataloader import load_ignition_mesh, ax1_shuffle, get_parent_dir
 import numpy as np
+import copy
 
 if __name__ == '__main__':
 
@@ -11,7 +12,11 @@ if __name__ == '__main__':
 
     for shuffle in [True, False]:
 
-        data, points = shuffle_data(orig_data, orig_points) if shuffle_data else (orig_data, orig_points)
+        if shuffle:
+            data = ax1_shuffle(copy.deepcopy(orig_data))
+        else:
+            data = orig_data
+
 
         for channel in range(data.shape[-1]):
 

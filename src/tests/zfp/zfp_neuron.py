@@ -1,7 +1,8 @@
 from MFZ.tests import zfp_compress_time_series
 import numpy as np
-from MFZ.dataloader import load_neuron_tx, get_parent_dir, shuffle_data
+from MFZ.dataloader import load_neuron_tx, get_parent_dir, ax1_shuffle
 from MFZ.util import save_stats
+import copy
 
 if __name__ == '__main__':
 
@@ -11,7 +12,10 @@ if __name__ == '__main__':
 
     for shuffle in [True, False]:
 
-        data, points = shuffle_data(orig_data, orig_points) if shuffle_data else (orig_data, orig_points)
+        if shuffle:
+            data = ax1_shuffle(copy.deepcopy(orig_data))
+        else:
+            data = orig_data
 
         stats_dict = zfp_compress_time_series(data, error_range=[1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1/4, 1/2])
 
