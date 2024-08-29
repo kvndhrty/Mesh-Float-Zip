@@ -8,7 +8,7 @@ __pycache__/
 /figures/
 /notebooks/
 /legacy/
-/stats/
+/stats/sphara/
 
 # C extensions
 *.so
