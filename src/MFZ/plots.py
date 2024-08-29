@@ -53,6 +53,7 @@ def plot_stats(stats_key, channel = 0 , shuffle = False, save_path = get_parent_
     #ax.set_xscale('log')
     ax.set_title(f'Channel {channel}: Relative Frobenius Error vs Compression Ratio')
     ax.set_yscale('log')
+    ax.set_xscale('log')
     ax.yaxis.set_major_locator(ticker.LogLocator(base=10, numticks=5))
     ax.yaxis.set_minor_locator(ticker.LogLocator(base=10, numticks=5, subs='all'))
     ax.legend()
@@ -74,7 +75,7 @@ def plot_stats(stats_key, channel = 0 , shuffle = False, save_path = get_parent_
 
     ax.set_xlabel('Compression Ratio')
     ax.set_ylabel('PSNR')
-    ax.set_ylim(0, 100)
+    ax.set_ylim(0, 120)
     ax.set_xscale('log')
     ax.set_title(f'Channel {channel}: PSNR vs Compression Ratio')
     ax.yaxis.set_major_locator(ticker.MultipleLocator(10))
@@ -85,3 +86,25 @@ def plot_stats(stats_key, channel = 0 , shuffle = False, save_path = get_parent_
     plt.savefig(save_path / f'{stats_key}' / f'channel_{channel}_avg_psnr_vs_compression_ratio_{stats_key}_shuffle_{shuffle}.png')
 
     plt.close()
+
+
+
+
+
+def plot_mhb(points, basis, basis_name='test' , save_path = get_parent_dir() / 'Mesh-Float-Zip/figures/final'):
+
+    fig, ax = plt.subplots()
+
+    (save_path / 'mhb' / basis_name).mkdir(parents=True, exist_ok=True)
+
+    for i in range(basis.shape[1]):
+
+        ax.tripcolor(points[:,0], points[:,1], basis[:,i], cmap='vi', shading='gouraud')
+
+
+
+        plt.tight_layout()
+
+        plt.savefig(save_path / 'mhb' / basis_name / 'eigenfunction_{i}.png')
+
+        plt.close()

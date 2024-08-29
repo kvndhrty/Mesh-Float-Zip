@@ -142,7 +142,7 @@ class Block(object):
 
         decoder = constriction.stream.queue.RangeDecoder(compressed)
 
-        decoded_bits = np.empty((len(self.points),encoded_field_length), dtype=np.uint8)
+        decoded_bits = np.empty((len(self.points)+1,encoded_field_length), dtype=np.uint8)
 
         model_params = self._eval_model(model_tuple, encoded_field_length)
 
@@ -152,7 +152,7 @@ class Block(object):
 
                 weighted_model = constriction.stream.model.Bernoulli(nu_1)
 
-                bits = decoder.decode(weighted_model, len(self.points))
+                bits = decoder.decode(weighted_model, len(self.points)+1)
 
                 decoded_bits[:,i] = bits
 
@@ -179,11 +179,15 @@ class Block(object):
 
         #Project data onto basis
 
-        data_spectrum = self.basis.T @ data
+        data_mean = np.mean(data, axis=0)
+
+        mean_centered_data = data - data_mean
+
+        data_spectrum = self.basis.T @ mean_centered_data
 
         #Convert data to block floating point representation 
 
-        bfp_data = BFP(data_spectrum, error_tol=error_tol)
+        bfp_data = BFP(np.hstack((data_mean, data_spectrum)), error_tol=error_tol)
 
         #Compress the data
         if bfp_data.exponent == '11111111':
@@ -220,7 +224,9 @@ class Block(object):
 
         bfp_data = BFP(array=None, error_tol=None, exponent=exponent, negabin_array=negabin_array, truncation_bit=truncate_bit)
 
-        return np.linalg.inv(self.basis.T) @ np.array(bfp_data.float())
+        float_data = np.array(bfp_data.float())
+
+        return (np.linalg.inv(self.basis.T) @ float_data[1::]) + float_data[0]
 
 
     def count_bits(self, block_data : dict):
@@ -228,6 +234,9 @@ class Block(object):
         compressed = block_data['mantissas']
         exponent = block_data['exponent']
         truncate_bit = block_data['truncate_bit']
+
+        if exponent == '11111111':
+            return 8
 
         if truncate_bit is None:
             truncate_bit_len = 0
@@ -253,7 +262,10 @@ class Block(object):
         else:
             line_endpoint = bits.shape[1] - 1
 
-        avg_zeros = np.mean(dist[0:line_endpoint], axis=0)
+        if line_endpoint == 0:
+            avg_zeros = 0.5
+        else:
+            avg_zeros = np.mean(dist[0:line_endpoint], axis=0)
 
         discrete_avg_zeros = np.floor(avg_zeros / (1/30)) * (1/30)
 

@@ -55,6 +55,17 @@ def load_ignition_mesh():
     return dataset, points
 
 
+def load_ignition_grid_residual():
+    parent_dir = get_parent_dir()
+    data_path = parent_dir / 'common-data' / "ignition_grid_offline_residual" / "features.npy"
+    dataset = np.load(data_path).reshape(450,2500,2)
+
+    X,Y = np.meshgrid(np.linspace(0,1,50), np.linspace(0,1,50))
+    points = np.stack([X,Y], axis=-1).reshape(2500,2)
+
+    return dataset, points
+
+
 def load_flat_plate():
     parent_dir = get_parent_dir()
     points_path = parent_dir / 'common-data' / "flat_plate_2d_cut" / "points_2.npy"
