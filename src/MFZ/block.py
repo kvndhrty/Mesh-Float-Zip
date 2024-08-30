@@ -20,6 +20,7 @@ class Block(object):
 
         if cache:
             self.basis = basis_function(points)
+            self.basis_pinv = np.linalg.pinv(self.basis)
 
 
     def __repr__(self) -> str:
@@ -183,7 +184,7 @@ class Block(object):
 
         mean_centered_data = data - data_mean
 
-        data_spectrum = self.basis.T @ mean_centered_data
+        data_spectrum = self.basis_pinv @ mean_centered_data
 
         #Convert data to block floating point representation 
 
@@ -226,7 +227,7 @@ class Block(object):
 
         float_data = np.array(bfp_data.float())
 
-        return (np.linalg.inv(self.basis.T) @ float_data[1::]) + float_data[0]
+        return (self.basis @ float_data[1::]) + float_data[0]
 
 
     def count_bits(self, block_data : dict):
