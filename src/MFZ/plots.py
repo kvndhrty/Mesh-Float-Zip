@@ -25,17 +25,18 @@ def plot_stats(stats_key, channel = 0 , shuffle = False, save_path = get_parent_
     pattern = re.compile(glob_string)
     stats_files = []
 
-    for x in (stats_dir / 'mfz').iterdir():
+    for x in (stats_dir / 'invmfz').iterdir():
         if pattern.search(x.name):
             stats_files.append(x)
-
+    
     for x in (stats_dir / 'sz').iterdir():
         if pattern.search(x.name):
             stats_files.append(x)
-
+    
     for x in (stats_dir / 'zfp').iterdir():
         if pattern.search(x.name):
             stats_files.append(x)
+    
 
     stats = [load_stats(stats_file) for stats_file in stats_files]
 
@@ -69,7 +70,7 @@ def plot_stats(stats_key, channel = 0 , shuffle = False, save_path = get_parent_
 
     for i , stat in enumerate(stats):
 
-        stat_name = re.search('mfz|sz|zfp', str(stats_files[i])).group(0)
+        stat_name = re.search('mfz|sz|zfp|invmfz', str(stats_files[i])).group(0)
 
         ax.plot(stat['comp_ratio'], stat['avg_psnr'], 'o-' ,label=stat_name)
 
